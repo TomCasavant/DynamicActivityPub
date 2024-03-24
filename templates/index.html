@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minetest</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            function loadMessages() {
+                $.ajax({
+                    url: '/api/get_messages',
+                    type: 'GET',
+                    data: { count: 5, page: 0 },
+                    success: function(data) {
+                        $('#message-container').empty();
+                        data.forEach(function(message) {
+                            $('#message-container').append('<div id="status"><p id="username">'+ message['username'] + "</p><p id='content'>" + message['content'] + '</p></div>');
+                        });
+                    }
+                });
+            }
+
+            // Load messages on page load
+            loadMessages();
+
+            // Reload messages every 1 second
+            setInterval(loadMessages, 1000);
+
+            $('#message-form').submit(function(event) {
+                event.preventDefault();
+                var message = $('#message-input').val();
+                var username = $('#username-input').val();
+                var server = $('#server-input').val();
+                var api_key = $('#api-key').val();
+                var group = $('#group').val();
+                $.ajax({
+                    url: '/api/create_message',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ message: message, username: username, server: server, api_key: api_key, groups: [group] }),
+                    success: function(data) {
+                        $('#message-input').val('');
+                        console.log('Message sent:', data.message);
+                    }
+                });
+            });
+
+            $('#update-profile-form').submit(function(event) {
+                event.preventDefault();
+                var name = $('#name-input').val();
+                var summary = $('#summary-input').val();
+                var attachments = $('#attachments-input').val();
+                var username = $('#username-input').val();
+                var api_key = $('#api-key-input').val();
+                $.ajax({
+                    url: '/api/update_profile',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ name: name, summary: summary, attachments: attachments, username: username, api_key: api_key }),
+                    success: function(data) {
+                        console.log('Profile updated:', data.message);
+                    }
+                });
+            });
+
+            $('#follow-form').submit(function(event) {
+                event.preventDefault();
+                var server = $('#follow-server').val();
+                var username = $('#follow-username').val();
+                var source_user = $('#source-username').val();
+                var api_key = $('#api-key-input').val();
+                var url = '/api/follow_user';
+                var data = { server: server, username: username, source_user: source_user, api_key: api_key };
+
+                // Check which button was clicked
+                var buttonType = $(this).find('button:focus').val();
+
+                if (buttonType === 'unfollow') {
+                    url = '/api/unfollow_user';
+                }
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(data) {
+                        console.log('User ' + (buttonType === 'unfollow' ? 'unfollowed' : 'followed') + ':', data.message);
+                    }
+                });
+            });
+        });
+    </script>
+    <style>
+        /* Your CSS styles here */
+        #status {
+            box-shadow: 2px 2px 5px rgba(1, 1, 30, 0.5);
+            background: rgba(0, 200, 0, 0.2);
+        }
+
+        #username {
+            font-size: 1.5em;
+            box-shadow: 2px 2px 5px rgba(1, 1, 30, 0.1);
+            color: rgba(0, 0, 0, 1);
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        #content {
+            font-size: 1.2em;
+            color: rgba(100, 100, 100, 1);
+        }
+    </style>
+</head>
+<body>
+    <div id="message-container"></div>
+    <form id="message-form">
+        <input type="text" id="username-input" placeholder="username">
+        <input type="text" id="server-input" placeholder="server">
+        <input type="api_key" id="api-key" placeholder="api_key">
+	<input type="group" id="group" placeholder="group">
+        <input type="text" id="message-input" placeholder="Enter your message">
+        <button type="submit">Send</button>
+    </form>
+
+    <form id="update-profile-form">
+        <input type="text" id="username-input" placeholder="username">
+        <input type="text" id="name-input" placeholder="name">
+        <input type="text" id="summary-input" placeholder="summary">
+        <input type="text" id="attachments-input" placeholder="attachments">
+        <input type="text" id="api-key-input" placeholder="api_key">
+        <button type="submit">Update Profile</button>
+    </form>
+
+    <form id="follow-form">
+        <input type="text" id="source-username" placeholder="username">
+        <input type="text" id="follow-username" placeholder="follow account">
+        <input type="text" id="follow-server" placeholder="follow server">
+        <button type="submit" value="follow">Follow</button>
+        <button type="submit" value="unfollow">Unfollow</button>
+    </form>
+</body>
+</html>

@@ -1,10 +1,14 @@
 from urllib.parse import urlparse
 
 class Recipient:
-    def __init__(self, server, username):
+    def __init__(self, server, username, ssl=True, type="User"):
         self.server = server
         self.username = username
-        self.base_url = f"https://{server}"
+        self.type = type
+        if ssl:
+            self.base_url = f"https://{server}"
+        else:
+            self.base_url = f"http://{server}"
         #self.recipient_url = f"{base_url}/users/{username}"
         #self.recipient_inbox = f"{recipient_url}/inbox"
         #recipient_parsed = urlparse(recipient_inbox)
@@ -13,7 +17,10 @@ class Recipient:
 
     @property
     def url(self):
-        return f"{self.base_url}/users/{self.username}"
+        u = f"{self.base_url}/users/{self.username}"
+        if (self.type == "Group"):
+            u = f"{self.base_url}"
+        return u
 
     @property
     def inbox(self):

@@ -1,4 +1,4 @@
-from models import User, db
+from models import User, db, Group
 from cryptography.hazmat.primitives import serialization as crypto_serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend as crypto_default_backend
@@ -48,3 +48,19 @@ def get_or_create_user(username):
 
     return user
 
+def get_or_create_group(name):
+    name = f"@{name}@{home_domain}"
+    group = Group.query.filter_by(name=name).first()
+
+    if group is None:
+        print("group doesn't exist")
+        public_key, private_key = create_rsa_key_pair()
+        group = Group(name=name, public_key=public_key, encrypted_private_key=private_key)
+        db.session.add(group)
+        db.session.commit()
+
+    return group
+
+def get_group(groupname):
+    groupname = f"@{groupname}@{home_domain}"
+    return Group.query.filter_by(name=groupname).first()

@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization
 
-from utils import get_user
+from utils import get_user, get_group
 from datetime import datetime
 import json
 import base64
@@ -18,9 +18,14 @@ def create_digest(message):
     return digest
 
 
-def signAndSend(message, source_username, recipient, sender_key):
+def signAndSend(message, source_username, recipient, sender_key, type="user"):
     print(source_username)
-    user = get_user(source_username)
+    user = None
+    if (type == "group"):
+        print("TYPE IS GROUP")
+        user = get_group(source_username)
+    else:
+        user = get_user(source_username)
 
     current_date = datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
     digest = create_digest(message)
@@ -54,7 +59,7 @@ def signAndSend(message, source_username, recipient, sender_key):
         'Signature': signature_header
     }
     print(raw_signature)
-    verification_testing(f"http://192.168.1.75:9999/users/{source_username}", private_key, raw_signature, signature_text)
+    #verification_testing(f"http://192.168.1.75:9999/users/{source_username}", private_key, raw_signature, signature_text)
 
     r = requests.post(recipient.inbox, headers=headers, json=message)
     return r

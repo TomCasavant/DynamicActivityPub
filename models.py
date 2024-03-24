@@ -6,9 +6,15 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+#follower_association_table = Table('follower_association', db.Model.metadata,
+#    Column('follower_id', Integer, ForeignKey('user.id')),
+#    Column('followed_id', Integer, ForeignKey('user.id'))
+#)
+
 follower_association_table = Table('follower_association', db.Model.metadata,
     Column('follower_id', Integer, ForeignKey('user.id')),
-    Column('followed_id', Integer, ForeignKey('user.id'))
+    Column('followed_id', Integer, ForeignKey('user.id')),
+    Column('group_id', Integer, ForeignKey('group.id'))
 )
 
 class User(db.Model):
@@ -41,6 +47,24 @@ class Group(db.Model):
     encrypted_private_key = db.Column(db.LargeBinary, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    # Define relationship with User for followers
+    #followers = relationship(
+    #    "User", secondary=follower_association_table,
+    #    primaryjoin=id==follower_association_table.c.followed_id,
+    #    secondaryjoin=id==follower_association_table.c.follower_id,
+    #    backref="following_groups"
+    #)
+
+    followers = relationship(
+        "User", secondary=follower_association_table,
+        primaryjoin=id==follower_association_table.c.group_id,
+        secondaryjoin=follower_association_table.c.follower_id==User.id,
+        backref="following_groups"
+    )
+
+    # Define relationship with Post
+    posts = db.relationship('Post', backref='group', lazy=True)
+
     def __repr__(self):
         return f'<Group {self.name}>'
 
@@ -48,6 +72,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=True)  # Nullable because a post can be for an individual user
     author_rel = db.relationship('User', backref='posts')
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 

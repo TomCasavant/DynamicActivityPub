@@ -33,6 +33,7 @@ def user(username):
                 "owner": f"{home_url}/users/{username}",
                 "publicKeyPem": public_key_pem
             },
+            "manuallyApprovesFollowers":False,
             "attachment": attachments 
         })
         response.headers['Content-Type'] = 'application/activity+json'
@@ -40,15 +41,75 @@ def user(username):
         return Response("", status=404)
     return response
 
+
 @users_bp.route('/users/<username>/posts/<int:post_id>')
 def get_post(username, post_id):
     post = Post.query.get_or_404(post_id)
-    return jsonify({
-        'id': post.id,
+
+    activity = {
+        '@context': [
+            "https://www.w3.org/ns/activitystreams",
+            {
+                "ostatus": "http://ostatus.org#",
+                "atomUri": "ostatus:atomUri",
+                "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+                "conversation": "ostatus:conversation",
+                "sensitive": "as:sensitive",
+                "toot": "http://joinmastodon.org/ns#",
+                "votersCount": "toot:votersCount"
+            }
+        ],
+        'type': 'Note',
+        'id': f'{home_url}/users/{username}/posts/{post.id}',
+        'to': ['https://www.w3.org/ns/activitystreams#Public'],
+        'inReplyTo': None,
+        'published': post.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'url': f'{home_url}/users/{username}/posts/{post.id}',
+        'attributedTo': f'{home_url}/users/{username}',
+        'summary': None,
+        'sensitive': False,
         'content': post.content,
-        'author_id': post.author_id,
-        'created_at': post.created_at
-    })
+        'contentMap': {
+            'en': post.content
+        },
+        'attachment': [],
+        'tag': [],
+        'replies': {
+            'id': f'{home_url}/users/{username}/posts/{post.id}/replies',
+            'type': 'Collection',
+            'first': {
+                'type': 'CollectionPage',
+                'next': f'{home_url}/users/{username}/posts/{post.id}/replies?only_other_accounts=true&page=true',
+                'partOf': f'{home_url}/users/{username}/posts/{post.id}/replies',
+                'items': []
+            }
+        }
+    }
+
+    return jsonify(activity)
+
+#@users_bp.route('/users/<username>/posts/<int:post_id>')
+#def get_post(username, post_id):
+#    post = Post.query.get_or_404(post_id)
+#    return jsonify({
+#        'type': 'Note',
+#        'id': f'{home_url}/users/{username}/posts/{post.id}',
+#         "@context": [
+#                "https://www.w3.org/ns/activitystreams"
+#        ],
+#        "to":[
+#            "https://www.w3.org/ns/activitystreams#Public"
+#        ],
+#        'inReplyTo': None,
+#        'attachment': [],
+#        'sensitive': False,
+#        'tag': [],
+#        'content': post.content,
+#        'author_id': post.author_id,
+#        'published': post.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+#        'url': f'{home_url}/users/{username}/posts/{post.id}',
+#        'attributedTo':f'{home_url}/users/{username}'
+#    })
 
 @users_bp.route('/users/<username>/outbox')
 def get_posts(username):
@@ -61,6 +122,16 @@ def get_posts(username):
             'created_at': post.created_at
         }
     ])
+
+# Assuming you have a function to create an ActivityStreams object
+def create_accept_activity(follower_url, followed_url):
+    accept_activity = {
+        '@context': 'https://www.w3.org/ns/activitystreams',
+        'type': 'Accept',
+        'actor': followed_url,
+        'object': follower_url
+    }
+    return accept_activity
 
 
 @users_bp.route('/users/<username>/inbox', methods=['POST'])
@@ -115,7 +186,10 @@ def user_inbox(username):
             print(followed.followers)
 
             # Return a 202 Accepted response
-            return Response("", status=202)
+            accept_activity = create_accept_activity(follower_url, followed_url)
+            response = jsonify(accept_activity)
+            response.status_code = 202
+            return response
 
     # Check if the request is an Undo activity
     elif data.get('type') == 'Undo' and data.get('object', {}).get('type') == 'Follow':

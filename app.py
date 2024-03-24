@@ -78,7 +78,38 @@ def get_or_create_user(username):
 
 def get_user(username):
     return User.query.filter_by(username=username).first()
-    
+
+def get_or_create_group(groupname):
+    group = Group.query.filter_by(name=groupname).first()
+
+    if group is None:
+        # Generate RSA key pair
+        key = rsa.generate_private_key(
+            backend=crypto_default_backend(),
+            public_exponent=65537,
+            key_size=2048
+        )
+
+        private_key = key.private_bytes(
+            crypto_serialization.Encoding.PEM,
+            crypto_serialization.PrivateFormat.PKCS8,
+            crypto_serialization.NoEncryption())
+
+        public_key = key.public_key().public_bytes(
+            crypto_serialization.Encoding.PEM,
+            crypto_serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+        group = Group(name=groupname, public_key=public_key.decode('utf-8'), encrypted_private_key=private_key)
+        db.session.add(group)
+        db.session.commit()
+
+    return group
+
+def get_group(groupname):
+    return Group.query.filter_by(name=groupname).first()
+
+
 # Create the database tables
 #db.create_all()
 #with app.app_context():
@@ -110,13 +141,18 @@ def webfinger():
     username_with_domain = resource.split('acct:', 1)[1]
 
     # Remove the domain part
+    print("GETTING USER")
     username = username_with_domain.replace('@activitypubtesting.duckdns.org', '')
-    user = get_user(username)
+    print(username)
+    print(username_with_domain)
+    user = get_user("@" + username_with_domain)
+    group = get_or_create_group("@" + username_with_domain)
     if user:
         url = f"{home_url}/users/{username}"
-    else:
+    elif group:
         url = f"{home_url}/groups/{username}"
-        
+    else:
+        return Response(response="Failure", status=400)
     response = make_response({
         "subject": resource,
         "links": [
