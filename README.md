@@ -4,5 +4,7 @@
 
 Messing around with ActivityPub, needed a way to generate activitypub profiles/messages dynamically (they do not need authentication because none of them are real users), primarily used to test this minetest activitypub bridge https://github.com/TomCasavant/MinetestActivityPub/
 
+Relevant blog post: https://tomcasavant.com/experimenting-with-activitypub-minetest-activitypub-bridge/
+
 
 
